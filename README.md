@@ -1,1 +1,88 @@
-# InstaGhost
+<p align="center">
+  <img src="instaghost-logo.png" alt="InstaGhost Logo" width="200"/>
+</p>
+
+<h1 align="center">🌌 InstaGhost</h1>
+<p align="center">
+  <strong>A sleek and powerful tool for Instagram data gathering</strong><br>
+  <em>Extract profile pics, posts, reels, and stories with ease!</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-1.0.0-green.svg" alt="Version"></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.8+-yellow.svg" alt="Python"></a>
+</p>
+
+---
+
+## 🚀 Overview
+
+**InstaGhost** is a command-line utility designed for seamless and professional Instagram data extraction. Whether you're grabbing profile pictures, downloading posts, reels, or stories, InstaGhost offers a simple yet powerful interface to get the job done. Explore the full project at [https://github.com/Anon4You/InstaGhost](https://github.com/Anon4You/InstaGhost).
+
+---
+
+## 🛠️ Installation
+
+Install InstaGhost with a single command:
+
+```bash
+pip install git+https://github.com/Anon4You/InstaGhost.git
+```
+
+> **Note**: Requires Python 3.8+.
+
+---
+
+## 📚 Usage
+
+Run InstaGhost with the following syntax:
+
+```bash
+instaghost <username> [options]
+```
+
+### Command Reference
+
+| Option              | Emoji | Description                        |
+|---------------------|-------|------------------------------------|
+| `-i, --interactive` | 🖥️   | Launch interactive terminal        |
+| `-p, --profile-pic` | 📸   | Extract profile picture            |
+| `-P, --posts`       | 📷   | Download posts (specify count)     |
+| `-r, --reels`       | 🎬   | Download reels (specify count)     |
+| `-s, --stories`     | 📖   | Download stories                   |
+| `-a, --all`         | 🚀   | Download all intelligence          |
+| `-o, --output`      | 💾   | Specify output directory           |
+| `-h, --help`        | ❓   | Show help message                  |
+
+### Example Commands
+
+```bash
+# Launch interactive mode
+instaghost username -i
+
+# Download profile picture and 5 posts
+instaghost target -p -P 5
+
+# Grab everything available
+instaghost user -a
+```
+
+---
+
+## ⚖️ License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## ⚠️ Disclaimer
+
+Use **InstaGhost** responsibly and in compliance with Instagram's Terms of Service. The developers are not liable for any misuse of this tool.
+
+---
+
+<p align="center">
+  <strong>Explore, extract, and enjoy! 🌟</strong><br>
+  Visit the full repository at <a href="https://github.com/Anon4You/InstaGhost">https://github.com/Anon4You/InstaGhost</a> for issues or feedback.
+</p>

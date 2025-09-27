@@ -27,7 +27,7 @@ class Colors:
 class HackerStyle:
     @staticmethod
     def banner():
-        # KEEPING YOUR ORIGINAL BANNER EXACTLY AS IS
+        os.system("clear")
         banner = f"""
 {Colors.CYAN}
 {' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀
@@ -338,7 +338,7 @@ def main():
         print(f"{Colors.BOLD}{Colors.CYAN}🛠️  INSTAGHOST COMMAND REFERENCE{Colors.RESET}")
         print(f"{Colors.CYAN}{'─'*50}{Colors.RESET}")
         print(f"\n{Colors.GREEN}Usage:{Colors.RESET}")
-        print(f"  python instaghost.py {Colors.YELLOW}<username>{Colors.RESET} {Colors.CYAN}[options]{Colors.RESET}")
+        print(f"  instaghost {Colors.YELLOW}<username>{Colors.RESET} {Colors.CYAN}[options]{Colors.RESET}")
         print(f"\n{Colors.GREEN}Options:{Colors.RESET}")
         print(f"  {Colors.YELLOW}-i, --interactive{Colors.RESET}  🖥️  Launch interactive terminal")
         print(f"  {Colors.YELLOW}-p, --profile-pic{Colors.RESET}  📸 Extract profile picture")
@@ -349,9 +349,9 @@ def main():
         print(f"  {Colors.YELLOW}-o, --output{Colors.RESET}      💾 Output directory")
         print(f"  {Colors.YELLOW}-h, --help{Colors.RESET}        📖 Show this help")
         print(f"\n{Colors.GREEN}Examples:{Colors.RESET}")
-        print(f"  python instaghost.py {Colors.CYAN}username -i{Colors.RESET}")
-        print(f"  python instaghost.py {Colors.CYAN}target -p -P 5{Colors.RESET}")
-        print(f"  python instaghost.py {Colors.CYAN}user -a{Colors.RESET}")
+        print(f"  instaghost {Colors.CYAN}username -i{Colors.RESET}")
+        print(f"  instaghost {Colors.CYAN}target -p -P 5{Colors.RESET}")
+        print(f"  instaghost {Colors.CYAN}user -a{Colors.RESET}")
         sys.exit(0)
     
     tool = InstaGhost()

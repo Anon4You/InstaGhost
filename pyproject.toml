@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Advanced Instagram OSINT Tool - Gather intelligence from Instagram profiles"
 readme = "README.md"
 authors = [
-    { name = "Anon4You", email = "your-email@example.com" }
+    { name = "Alienkrishn [Anon4You]"}
 ]
 license = { text = "MIT" }
 keywords = ["instagram", "osint", "security", "hacking", "reconnaissance"]
