@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/instaghost/__init__.py
+src/instaghost/cli.py
+src/instaghost.egg-info/PKG-INFO
+src/instaghost.egg-info/SOURCES.txt
+src/instaghost.egg-info/dependency_links.txt
+src/instaghost.egg-info/entry_points.txt
+src/instaghost.egg-info/requires.txt
+src/instaghost.egg-info/top_level.txt

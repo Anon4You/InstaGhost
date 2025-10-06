@@ -1,3 +1,31 @@
+Metadata-Version: 2.4
+Name: instaghost
+Version: 1.0.2
+Summary: Advanced Instagram OSINT Tool - Gather intelligence from Instagram profiles
+Author: Alienkrishn [Anon4You]
+License: MIT
+Project-URL: Homepage, https://github.com/Anon4You/InstaGhost
+Project-URL: Bug Reports, https://github.com/Anon4You/InstaGhost/issues
+Keywords: instagram,osint,security,hacking,reconnaissance
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Information Technology
+Classifier: Topic :: Security
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: instaloader>=4.9
+Requires-Dist: requests>=2.25.1
+Dynamic: license-file
+
 <p align="center">
   <img src="instaghost-logo.png" alt="InstaGhost Logo" width="200"/>
 </p>
@@ -5,12 +33,12 @@
 <h1 align="center">🌌 InstaGhost</h1>
 <p align="center">
   <strong>A sleek and powerful tool for Instagram data gathering</strong><br>
-  <em>Extract profile pics, posts, reels, stories, and more with ease!</em>
+  <em>Extract profile pics, posts, reels, and stories with ease!</em>
 </p>
 
 <p align="center">
   <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-1.0.2-green.svg" alt="Version"></a>
+  <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-1.0.0-green.svg" alt="Version"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.8+-yellow.svg" alt="Python"></a>
 </p>
 
@@ -18,7 +46,7 @@
 
 ## 🚀 Overview
 
-**InstaGhost** is a feature-rich command-line utility for professional Instagram data extraction. Effortlessly download profile pictures, posts, reels, stories, and content from specific URLs, including private accounts with authentication. Explore the full project at [https://github.com/Anon4You/InstaGhost](https://github.com/Anon4You/InstaGhost).
+**InstaGhost** is a command-line utility designed for seamless and professional Instagram data extraction. Whether you're grabbing profile pictures, downloading posts, reels, or stories, InstaGhost offers a simple yet powerful interface to get the job done. Explore the full project at [https://github.com/Anon4You/InstaGhost](https://github.com/Anon4You/InstaGhost).
 
 ---
 
@@ -36,12 +64,10 @@ pip install git+https://github.com/Anon4You/InstaGhost.git
 
 ## 📚 Usage
 
-Run InstaGhost with one of the following syntaxes:
+Run InstaGhost with the following syntax:
 
 ```bash
 instaghost <username> [options]
-instaghost --url <instagram_url>
-instaghost --login
 ```
 
 ### Command Reference
@@ -55,12 +81,6 @@ instaghost --login
 | `-s, --stories`     | 📖   | Download stories                   |
 | `-a, --all`         | 🚀   | Download all intelligence          |
 | `-o, --output`      | 💾   | Specify output directory           |
-| `-l, --login`       | 🔐   | Login to Instagram                 |
-| `--login-user`      | 👤   | Login username                     |
-| `--login-pass`      | 🔑   | Login password                     |
-| `--save-login`      | 💾   | Save login credentials             |
-| `--url`             | 🔗   | Download from specific URL         |
-| `--private`         | 🕵️   | Access private accounts            |
 | `-h, --help`        | ❓   | Show help message                  |
 
 ### Example Commands
@@ -74,15 +94,6 @@ instaghost target -p -P 5
 
 # Grab everything available
 instaghost user -a
-
-# Download content from a specific URL
-instaghost --url https://instagram.com/p/ABC123/
-
-# Login to Instagram with credentials
-instaghost --login --login-user myuser --login-pass mypass
-
-# Access a private account
-instaghost private_user --private -l
 ```
 
 ---
@@ -95,7 +106,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## ⚠️ Disclaimer
 
-Use **InstaGhost** responsibly and in compliance with Instagram's Terms of Service. Ensure you have proper authorization when accessing private accounts. The developers are not liable for any misuse of this tool.
+Use **InstaGhost** responsibly and in compliance with Instagram's Terms of Service. The developers are not liable for any misuse of this tool.
 
 ---
 
