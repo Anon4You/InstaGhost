@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-   <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-1.0.3-green.svg" alt="Version"></a>
+   <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-2.0.0-green.svg" alt="Version"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.8+-yellow.svg" alt="Python"></a>
 </p>
 
@@ -20,6 +20,14 @@
 
 **InstaGhost** is a feature-rich command-line utility for professional Instagram data extraction. Effortlessly download profile pictures, posts, reels, stories, and content from specific URLs, including private accounts with authentication. Explore the full project at [https://github.com/Anon4You/InstaGhost](https://github.com/Anon4You/InstaGhost).
 
+### ✨ Features
+
+- 📸 Profile pictures, 📷 posts, 🎬 reels, 📖 stories, 🔗 single-URL downloads
+- 🔐 Login with 2FA and app-challenge support; sessions reused across runs
+- 🛰️ Basic profile report always prints, with cached fallback under rate limits
+- 🖥️ Interactive terminal mode for guided extraction
+- ⚡ Fail-fast errors with actionable messages and proper exit codes
+
 ---
 
 ## 🛠️ Installation
@@ -27,6 +35,15 @@
 Install InstaGhost with a single command:
 
 ```bash
+pip install git+https://github.com/Anon4You/InstaGhost.git
+```
+
+On Termux, `instagrapi` needs the community wheel index:
+
+```bash
+apt install python python-pillow
+python -m pip install -U pip setuptools wheel
+python -m pip install --extra-index-url https://termux-user-repository.github.io/pypi/ instagrapi
 pip install git+https://github.com/Anon4You/InstaGhost.git
 ```
 
@@ -62,6 +79,7 @@ instaghost --login
 | `--url`             | 🔗   | Download from specific URL         |
 | `--private`         | 🕵️   | Access private accounts            |
 | `-h, --help`        | ❓   | Show help message                  |
+| `-V, --version`     | 🔖   | Show version and exit              |
 
 ### Example Commands
 
@@ -94,27 +112,40 @@ login is saved to `~/.config/instaghost/session-<user>` and silently reused by
 all later commands (public lookups included), so you only log in once. If the
 session expires, just log in again.
 
+> **Note:** Instagram blocks anonymous requests — even a simple username
+> search requires a logged-in session. Log in once first, then all commands
+> work:
+>
+> ```bash
+> instaghost --login --login-user YOU --login-pass PW --save-login
+> instaghost someuser
+> ```
+
 Basic profile info is cached per target, so it still shows (marked as cached)
 when Instagram rate-limits the live request. Downloads always need a live
 request and may still fail under a rate limit.
 
 ---
 
-## ⚠️ Troubleshooting `429 Too Many Requests`
+## ⚠️ Troubleshooting `429 Too Many Requests` / rate limits
 
-Instagram aggressively throttles the profile endpoint — this can happen on the
-very first request, even logged in (known instaloader 4.15.x issue). The tool
-fails fast instead of hanging. If you see it:
+Instagram throttles aggressive scraping. v2 uses `instagrapi` (private mobile
+API), which is far more robust than the old web endpoint, but limits still
+apply. If you see rate-limit errors:
 
 1. Close the Instagram app and don't run parallel instances or VPNs.
 2. Wait 30–60 minutes, then log in once and make a single request.
-3. Repeated restarts make the ban worse — each retry counts as more requests.
+3. If a challenge appears, approve the login in your Instagram app and retry.
+4. Repeated restarts make the ban worse — each retry counts as more requests.
 
 ---
 
 ## ⚖️ License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+See [SECURITY.md](SECURITY.md) for credential handling and reporting
+vulnerabilities, and [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
