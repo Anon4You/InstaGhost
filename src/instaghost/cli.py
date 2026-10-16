@@ -29,31 +29,36 @@ class Colors:
 class HackerStyle:
     @staticmethod
     def banner():
-        os.system("clear")
+        if sys.stdout.isatty():
+            os.system("cls" if os.name == "nt" else "clear")
+        try:
+            from instaghost import __version__ as _ver
+        except Exception:
+            _ver = "1.0.2"
+        pad = ' ' * 2
         banner = f"""
 {Colors.CYAN}
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣾⣿⣿⣿⣿⣿⣿⣶⣄⠀⠀⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⠿⢿⣿⣿⣿⣿⣆⠀⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⠁⠀⠿⢿⣿⡿⣿⣿⡆⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣦⣤⣴⣿⠃⠀⠿⣿⡇⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⡿⠋⠁⣿⠟⣿⣿⢿⣧⣤⣴⣿⡇⠀
-{' '*10}⠀⠀⠀⠀⢀⣠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠘⠁⢸⠟⢻⣿⡿⠀⠀
-{' '*10}⠀⠀⠙⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣴⣇⢀⣤⠀⠀⠀⠀⠘⣿⠃⠀⠀
-{' '*10}⠀⠀⠀⠀⠀⢈⣽⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣴⣿⢀⣴⣾⠇⠀⠀⠀
-{' '*10}⠀⠀⣀⣤⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀
-{' '*10}⠀⠀⠉⠉⠉⠉⣡⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠃⠀⠀⠀⠀⠀
-{' '*10}⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⡿⠟⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠁⠀⠀⠀⠀⠀⠀
-{' '*10}⠀⠀⣴⡾⠿⠿⠿⠛⠋⠉⠀⢸⣿⣿⣿⣿⠿⠋⢸⣿⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⡿⠟⠋⠁⠀⠀⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-{' '*10}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠈⠀⠀
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣀⣀
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣾⣿⣿⣿⣿⣿⣿⣶⣄
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⠿⢿⣿⣿⣿⣿⣆
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⠁⠀⠿⢿⣿⡿⣿⣿⡆
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣦⣤⣴⣿⠃⠀⠿⣿⡇
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⡿⠋⠁⣿⠟⣿⣿⢿⣧⣤⣴⣿⡇
+{pad}⠀⠀⠀⠀⢀⣠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠘⠁⢸⠟⢻⣿⡿
+{pad}⠀⠀⠙⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣴⣇⢀⣤⠀⠀⠀⠀⠘⣿⠃
+{pad}⠀⠀⠀⠀⠀⢈⣽⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣴⣿⢀⣴⣾⠇
+{pad}⠀⠀⣀⣤⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏
+{pad}⠀⠀⠉⠉⠉⠉⣡⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠃
+{pad}⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⡿⠟⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠁
+{pad}⠀⠀⣴⡾⠿⠿⠿⠛⠋⠉⠀⢸⣿⣿⣿⣿⠿⠋⢸⣿⡿⠋
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⡿⠟⠋⠁⠀⠀⡿⠋
+{pad}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠈
 {Colors.RESET}
 
-{Colors.BLUE}{Colors.BOLD}       InstaGhost - Instagram OSINT Tool{Colors.RESET}
-{Colors.GREEN}                Author: Anon4You{Colors.RESET}
-{Colors.YELLOW}       GitHub: github.com/Anon4You/InstaGhost{Colors.RESET}
+{Colors.BLUE}{Colors.BOLD}{pad}InstaGhost v{_ver} - Instagram OSINT Tool{Colors.RESET}
+{Colors.GREEN}{pad}Author: Anon4You  |  GitHub: github.com/Anon4You/InstaGhost{Colors.RESET}
 
-{Colors.WHITE} Simple and professional Instagram data gathering{Colors.RESET}
+{Colors.WHITE}{pad}Simple and professional Instagram data gathering{Colors.RESET}
 """
         print(banner)
     
@@ -114,6 +119,20 @@ class LoginManager:
         config_dir = Path.home() / '.config' / 'instaghost'
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir / 'logindata'
+
+    @staticmethod
+    def get_session_path(username):
+        """Session file for a given login user (reuse avoids relogin blocks)."""
+        config_dir = Path.home() / '.config' / 'instaghost'
+        config_dir.mkdir(parents=True, exist_ok=True)
+        return config_dir / f'session-{username}'
+
+    @staticmethod
+    def get_profile_cache_path(username):
+        """Cached basic info so it works even when IG rate-limits fresh fetches."""
+        config_dir = Path.home() / '.config' / 'instaghost'
+        config_dir.mkdir(parents=True, exist_ok=True)
+        return config_dir / f'profile-{username}.json'
     
     @staticmethod
     def save_login_data(username, password):
@@ -157,70 +176,135 @@ class LoginManager:
 
 class InstaGhost:
     def __init__(self):
-        self.loader = instaloader.Instaloader()
+        # max_connection_attempts=1: fail fast on 429 instead of hanging ~11 min
+        self.loader = instaloader.Instaloader(max_connection_attempts=1)
         self.loader.save_metadata = False
         self.loader.download_video_thumbnails = False
         self.loader.compress_json = False
         self.is_logged_in = False
-    
+        self.login_user = None
+
+    def try_saved_session(self, username=None):
+        """Resume a saved session without a password prompt. Returns True on success."""
+        candidates = []
+        if username:
+            candidates.append(username)
+        saved_login = LoginManager.load_login_data()
+        if saved_login and saved_login.get('username') not in candidates:
+            candidates.append(saved_login['username'])
+        # Fall back to any session-* file (logindata may be missing)
+        try:
+            config_dir = Path.home() / '.config' / 'instaghost'
+            for p in config_dir.glob('session-*'):
+                name = p.name[len('session-'):]
+                if name and name not in candidates:
+                    candidates.append(name)
+        except Exception:
+            pass
+        for name in candidates:
+            session_file = LoginManager.get_session_path(name)
+            if not session_file.exists():
+                continue
+            try:
+                self.loader.load_session_from_file(name, str(session_file))
+                self.is_logged_in = True
+                self.login_user = name
+                return True
+            except Exception:
+                continue
+        return False
+
     def login(self, username=None, password=None):
         """Login to Instagram account"""
+        loading = None
         try:
             # Try to load saved credentials first
             saved_login = LoginManager.load_login_data()
-            
+
             if saved_login and not username:
                 username = saved_login['username']
                 password = saved_login['password']
                 HackerStyle.print_info("Using saved login credentials")
-            
+
+            # Reuse session file so we don't trigger a fresh login challenge
+            if username and not password:
+                if self.try_saved_session(username):
+                    HackerStyle.print_success(f"Resumed saved session as @{self.login_user}")
+                    return True
+
             if not username or not password:
                 HackerStyle.print_error("Username and password required for login")
                 return False
-            
+
+            # Session reuse before password login
+            session_file = LoginManager.get_session_path(username)
+            if session_file.exists():
+                try:
+                    self.loader.load_session_from_file(username, str(session_file))
+                    self.is_logged_in = True
+                    self.login_user = username
+                    HackerStyle.print_success(f"Resumed saved session as @{username}")
+                    return True
+                except Exception:
+                    pass  # fall through to fresh login
+
             loading = LoadingAnimation("Authenticating with Instagram")
             loading.start()
-            
+
             self.loader.login(username, password)
             loading.stop()
-            
+            loading = None
+
+            try:
+                self.loader.save_session_to_file(str(session_file))
+            except Exception:
+                pass
             self.is_logged_in = True
+            self.login_user = username
             HackerStyle.print_success(f"Successfully logged in as @{username}")
             return True
-            
+
         except instaloader.exceptions.BadCredentialsException:
-            loading.stop()
+            if loading:
+                loading.stop()
             HackerStyle.print_error("Invalid credentials - login failed")
             return False
         except instaloader.exceptions.TwoFactorAuthRequiredException:
-            loading.stop()
+            if loading:
+                loading.stop()
+                loading = None
             HackerStyle.print_info("Two-factor authentication required")
             two_factor_code = input(f"{Colors.YELLOW}Enter 2FA code: {Colors.RESET}").strip()
             try:
                 self.loader.two_factor_login(two_factor_code)
+                try:
+                    self.loader.save_session_to_file(
+                        str(LoginManager.get_session_path(username)))
+                except Exception:
+                    pass
                 self.is_logged_in = True
+                self.login_user = username
                 HackerStyle.print_success(f"Successfully logged in as @{username}")
                 return True
             except Exception as e:
                 HackerStyle.print_error(f"2FA login failed: {e}")
                 return False
         except Exception as e:
-            loading.stop()
+            if loading:
+                loading.stop()
             HackerStyle.print_error(f"Login failed: {e}")
             return False
     
     def get_profile_info(self, username):
+        loading = None
         try:
             loading = LoadingAnimation(f"Scanning target @{username}")
             loading.start()
-            time.sleep(1)
-            
+
             profile = instaloader.Profile.from_username(self.loader.context, username)
             loading.stop()
-            
-            HackerStyle.print_success(f"Target acquired: @{username}")
-            HackerStyle.print_system("Profile data extracted successfully")
-            
+            loading = None
+
             profile_info = {
                 'username': profile.username,
                 'full_name': profile.full_name,
@@ -235,16 +319,64 @@ class InstaGhost:
                 'profile_pic_url': profile.profile_pic_url,
                 'fetched_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
-            
+
+            HackerStyle.print_success(f"Target acquired: @{username}")
+            HackerStyle.print_system("Profile data extracted successfully")
+
+            try:
+                with open(LoginManager.get_profile_cache_path(username), 'w') as f:
+                    json.dump(profile_info, f)
+            except Exception:
+                pass
+
             return profile_info
-            
+
         except instaloader.exceptions.ProfileNotExistsException:
-            loading.stop()
+            if loading:
+                loading.stop()
             HackerStyle.print_error(f"Target not found: @{username}")
             return None
+        except (instaloader.exceptions.ConnectionException,
+                instaloader.exceptions.TooManyRequestsException) as e:
+            if loading:
+                loading.stop()
+            cached = self._load_cached_profile(username)
+            if cached:
+                HackerStyle.print_warning(f"Live fetch rate-limited, showing cached info for @{username}")
+                return cached
+            HackerStyle.print_error(f"Rate-limited by Instagram: {e}")
+            HackerStyle.print_info("Wait a few minutes, then use --login (session is reused).")
+            return None
+        except instaloader.exceptions.LoginRequiredException:
+            if loading:
+                loading.stop()
+            cached = self._load_cached_profile(username)
+            if cached:
+                HackerStyle.print_warning(f"Login required, showing cached info for @{username}")
+                return cached
+            HackerStyle.print_error("Instagram requires login for this request - run with --login first")
+            return None
         except Exception as e:
-            loading.stop()
+            if loading:
+                loading.stop()
+            cached = self._load_cached_profile(username)
+            if cached:
+                HackerStyle.print_warning(f"Live fetch failed, showing cached info for @{username}")
+                return cached
             HackerStyle.print_error(f"Scanning failed: {str(e)}")
+            return None
+
+    def _load_cached_profile(self, username):
+        """Return cached basic info if a previous successful fetch exists."""
+        cache_path = LoginManager.get_profile_cache_path(username)
+        if not cache_path.exists():
+            return None
+        try:
+            with open(cache_path) as f:
+                data = json.load(f)
+            data['cached'] = True
+            return data
+        except Exception:
             return None
     
     def get_private_profile_info(self, username):
@@ -252,29 +384,33 @@ class InstaGhost:
         if not self.is_logged_in:
             HackerStyle.print_error("Login required to access private accounts")
             return None
-        
+
+        loading = None
         try:
             loading = LoadingAnimation(f"Accessing private account @{username}")
             loading.start()
-            
+
             profile = instaloader.Profile.from_username(self.loader.context, username)
-            
+
             # Check if we follow this private account
             if not profile.followed_by_viewer:
                 loading.stop()
+                loading = None
                 HackerStyle.print_error(f"You don't follow private account @{username}")
                 return None
-            
+
             loading.stop()
-            
+            loading = None
+
             profile_info = self.get_profile_info(username)
             if profile_info:
                 HackerStyle.print_success(f"Private account data extracted: @{username}")
-            
+
             return profile_info
-            
+
         except Exception as e:
-            loading.stop()
+            if loading:
+                loading.stop()
             HackerStyle.print_error(f"Failed to access private account: {e}")
             return None
     
@@ -283,10 +419,11 @@ class InstaGhost:
             HackerStyle.print_info("Extracting profile picture...")
             profile = instaloader.Profile.from_username(self.loader.context, username)
             pic_url = profile.profile_pic_url
-            
-            Path(output_dir).mkdir(exist_ok=True)
-            
-            response = requests.get(pic_url)
+
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+            response = requests.get(pic_url, timeout=30)
+            response.raise_for_status()
             filename = f"{output_dir}/{username}_profile_pic.jpg"
             
             with open(filename, 'wb') as f:
@@ -371,43 +508,58 @@ class InstaGhost:
     
     def download_from_url(self, url, output_dir="downloads"):
         """Download specific post or reel from URL"""
+        loading = None
         try:
             # Extract shortcode from URL
             shortcode = self.extract_shortcode_from_url(url)
             if not shortcode:
                 HackerStyle.print_error("Invalid Instagram URL")
                 return False
-            
+
             loading = LoadingAnimation("Fetching post from URL")
             loading.start()
-            
+
             post = instaloader.Post.from_shortcode(self.loader.context, shortcode)
             loading.stop()
-            
+            loading = None
+
             HackerStyle.print_info(f"Downloading: {post.title if post.title else 'Instagram Post'}")
-            
-            Path(output_dir).mkdir(exist_ok=True)
+
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
             self.loader.download_post(post, target=output_dir)
-            
+
             HackerStyle.print_success(f"Downloaded post to {output_dir}")
             return True
-            
+
         except instaloader.exceptions.PrivateAccountNotFollowedException:
-            loading.stop()
+            if loading:
+                loading.stop()
             HackerStyle.print_error("Private account - you need to follow this account or login")
             return False
+        except (instaloader.exceptions.ConnectionException,
+                instaloader.exceptions.TooManyRequestsException) as e:
+            if loading:
+                loading.stop()
+            HackerStyle.print_error(f"Rate-limited: {e} - wait, then retry with --login")
+            return False
+        except instaloader.exceptions.LoginRequiredException:
+            if loading:
+                loading.stop()
+            HackerStyle.print_error("Login required for this URL - run with --login first")
+            return False
         except Exception as e:
-            loading.stop()
+            if loading:
+                loading.stop()
             HackerStyle.print_error(f"Download from URL failed: {e}")
             return False
-    
+
     def extract_shortcode_from_url(self, url):
         """Extract Instagram shortcode from various URL formats"""
         patterns = [
-            r'instagram\.com/p/([^/?]+)',
-            r'instagram\.com/reel/([^/?]+)',
-            r'instagram\.com/stories/[^/]+/([^/?]+)',
-            r'instagram\.com/tv/([^/?]+)'
+            r'(?<!\w)instagram\.com/p/([^/?#&]+)',
+            r'(?<!\w)instagram\.com/reels?/([^/?#&]+)',
+            r'(?<!\w)instagram\.com/stories/[^/]+/([^/?#&]+)',
+            r'(?<!\w)instagram\.com/tv/([^/?#&]+)',
         ]
         
         for pattern in patterns:
@@ -419,7 +571,10 @@ class InstaGhost:
     def print_profile_info(self, profile_info):
         if not profile_info:
             return
-        
+
+        if profile_info.get('cached'):
+            HackerStyle.print_warning(f"Cached data (live fetch blocked) - from {profile_info.get('fetched_at', '?')}")
+
         print(f"\n{Colors.PURPLE}{'═'*60}{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.CYAN}🛰️  TARGET PROFILE INTELLIGENCE REPORT{Colors.RESET}")
         print(f"{Colors.PURPLE}{'═'*60}{Colors.RESET}")
@@ -600,45 +755,60 @@ def main():
                 LoginManager.save_login_data(args.login_user, args.login_pass)
         else:
             sys.exit(1)
-    
+
+    # Attach any saved session so even public lookups benefit from login
+    if not tool.is_logged_in:
+        tool.try_saved_session(args.login_user)
+
+    if tool.is_logged_in:
+        HackerStyle.print_info(f"Logged in as @{tool.login_user}")
+    else:
+        HackerStyle.print_warning("Not logged in - anonymous mode (expect rate limits)")
+
     # Handle URL download
     if args.url:
         tool.download_from_url(args.url, output_dir)
         sys.exit(0)
-    
+
     # Handle profile operations
     if args.username:
         if args.private:
             if not tool.is_logged_in:
-                HackerStyle.print_error("Login required for private account access")
-                sys.exit(1)
+                # Same-invocation `-l` or a previous saved session both work
+                if args.login:
+                    tool.login(args.login_user, args.login_pass)
+                if not tool.is_logged_in:
+                    tool.try_saved_session()
+                if not tool.is_logged_in:
+                    HackerStyle.print_error("Login required for private account access")
+                    sys.exit(1)
             profile_info = tool.get_private_profile_info(args.username)
         else:
             profile_info = tool.get_profile_info(args.username)
-        
+
         if not profile_info:
             sys.exit(1)
-        
+
+        # Basic info always shows, even if downloads below fail
+        tool.print_profile_info(profile_info)
+
         if args.interactive:
             tool.interactive_menu(profile_info)
             return
-        
+
         if args.profile_pic or args.all:
             tool.download_profile_pic(args.username, output_dir)
-        
+
         if args.posts or args.all:
             count = args.posts or 10
             tool.download_posts(args.username, count, output_dir)
-        
+
         if args.reels or args.all:
             count = args.reels or 5
             tool.download_reels(args.username, count, output_dir)
-        
+
         if args.stories or args.all:
             tool.download_stories(args.username, output_dir)
-        
-        if not any([args.profile_pic, args.posts, args.reels, args.stories, args.all]):
-            tool.print_profile_info(profile_info)
     
     HackerStyle.print_success("Mission accomplished! 🏴‍☠️")
 
