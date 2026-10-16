@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-1.0.2-green.svg" alt="Version"></a>
+   <a href="https://github.com/Anon4You/InstaGhost"><img src="https://img.shields.io/badge/Version-1.0.3-green.svg" alt="Version"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.8+-yellow.svg" alt="Python"></a>
 </p>
 
@@ -84,6 +84,31 @@ instaghost --login --login-user myuser --login-pass mypass
 # Access a private account
 instaghost private_user --private -l
 ```
+
+---
+
+## 🔐 Login sessions
+
+Every run prints `Logged in as @you` or a `Not logged in` warning. A successful
+login is saved to `~/.config/instaghost/session-<user>` and silently reused by
+all later commands (public lookups included), so you only log in once. If the
+session expires, just log in again.
+
+Basic profile info is cached per target, so it still shows (marked as cached)
+when Instagram rate-limits the live request. Downloads always need a live
+request and may still fail under a rate limit.
+
+---
+
+## ⚠️ Troubleshooting `429 Too Many Requests`
+
+Instagram aggressively throttles the profile endpoint — this can happen on the
+very first request, even logged in (known instaloader 4.15.x issue). The tool
+fails fast instead of hanging. If you see it:
+
+1. Close the Instagram app and don't run parallel instances or VPNs.
+2. Wait 30–60 minutes, then log in once and make a single request.
+3. Repeated restarts make the ban worse — each retry counts as more requests.
 
 ---
 
