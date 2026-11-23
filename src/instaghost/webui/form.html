@@ -1,0 +1,35 @@
+<section class="hero">
+  <span class="eyebrow">Instagram intelligence</span>
+  <h1>Fetch a profile.<br><span class="grad">Keep the files.</span></h1>
+  <p>One job at a time, using the session saved on this machine.</p>
+</section>
+<div class="layout">
+  <form class="panel" method="post" action="/run" id="job-form">
+    <input type="hidden" name="csrf" value="{{csrf}}">
+    <fieldset class="actions"><legend>What to fetch</legend><div class="tiles">{{tiles}}</div></fieldset>
+    <label class="field" id="username-field"><span>Instagram username</span>
+      <input name="username" placeholder="username" autocapitalize="off" autocorrect="off"
+             spellcheck="false" autocomplete="off">
+    </label>
+    <label class="field" id="count-field" hidden><span>Count <em>posts or reels, 1–30</em></span>
+      <input name="count" type="number" min="1" max="30" value="5">
+    </label>
+    <label class="field" id="url-field" hidden><span>Instagram URL</span>
+      <input name="url" placeholder="https://instagram.com/p/..." spellcheck="false" autocomplete="off">
+    </label>
+    <button class="primary" type="submit">Run job</button>
+    <p class="fine">Only fetch accounts you are allowed to access.</p>
+  </form>
+  <aside class="panel side">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li>Pick what to fetch and enter a username.</li>
+      <li>The job runs with your saved login session.</li>
+      <li>Photos and videos appear here for download.</li>
+    </ol>
+    <div class="tip"><strong>Tip</strong> Downloaded files stay in the job folder
+    on this machine. This page is just the gallery.</div>
+  </aside>
+</div>
+<div id="busy" class="busy" role="status" aria-live="polite"><div class="spinner"></div><strong>Working…</strong>
+<span>This can take a minute. Keep this page open.</span></div>

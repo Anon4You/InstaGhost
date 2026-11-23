@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.1.0
+
+- Optional web gateway (`instaghost-web`) and Telegram bot (`instaghost-bot`)
+  that reuse the saved host session and never ask for an Instagram password.
+- Web gateway: token link, HttpOnly cookie auth, dark gallery UI, one job at
+  a time; templates and assets live in `instaghost/webui/`.
+- Telegram bot: owner allowlist, per-command jobs, sends media back directly.
+- Package split into `cli`, `client`, `auth`, `cache`, `config`, `output`,
+  `errors`, `gateway`, `web`, and `telegram_bot` modules.
+- Gateways cache the target lookup, so each job makes one profile request.
+- Documented the TermuxVoid package (`pkg install instaghost`), which installs
+  all dependencies and upgrades with normal Termux package updates.
+- Expanded the README with installation paths, CLI and authentication details,
+  gateway guides, data locations, troubleshooting, and development notes.
+
 ## 2.0.0
 
 - Backend rewrite: `instaloader` → `instagrapi` (private mobile API), fixing

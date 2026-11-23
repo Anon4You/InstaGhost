@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>{{title}}</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">
+    <span class="logo"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7v12l3-2.2 2 2.2 2-2.2 2 2.2 2-2.2L19 21V9a7 7 0 0 0-7-7Zm-2.6 8.2a1.4 1.4 0 1 1 0-2.8 1.4 1.4 0 0 1 0 2.8Zm5.2 0a1.4 1.4 0 1 1 0-2.8 1.4 1.4 0 0 1 0 2.8Z"/></svg></span>
+    <span>InstaGhost<small>Web Gateway</small></span>
+  </a>
+  {{status}}
+</header>
+<main class="wrap">
+{{content}}
+</main>
+<footer>Runs with the session saved on this machine · one job at a time · media stays local</footer>
+<script src="/assets/app.js" defer></script>
+</body>
+</html>
