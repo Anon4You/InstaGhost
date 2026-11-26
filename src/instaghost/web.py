@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from . import config
-from .gateway import resolve_job_file, run_job, valid_username
+from .gateway import prune_jobs, resolve_job_file, run_job, valid_username
 
 UI_DIR = Path(__file__).with_name("webui")
 ASSETS = {
@@ -177,6 +177,7 @@ def _open_browser(url):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "InstaGhostGateway"
+    timeout = 30
 
     def log_message(self, *args):
         pass
@@ -187,6 +188,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; img-src 'self' data:; media-src 'self'; "
+            "style-src 'self'; script-src 'self'; base-uri 'none'; "
+            "form-action 'self'; frame-ancestors 'none'",
+        )
         self.end_headers()
         self.wfile.write(data)
 
@@ -200,6 +210,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Location", target or "/")
         self.send_header("Set-Cookie", cookie.output(header="").strip())
         self.send_header("Content-Length", "0")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
 
     def _denied(self):
@@ -280,6 +293,7 @@ class Handler(BaseHTTPRequestHandler):
             ok, text, jobdir = run_job(action, username=username, count=count, url=url)
         except Exception as e:
             text = f"Job failed: {e}"
+        prune_jobs()
 
         files = []
         if jobdir:
@@ -309,6 +323,7 @@ def main():
     args = parser.parse_args()
 
     TOKEN = os.environ.get("INSTAGHOST_WEB_TOKEN") or secrets.token_urlsafe(24)
+    prune_jobs()
     try:
         server = HTTPServer((args.host, args.port), Handler)
     except OSError as e:

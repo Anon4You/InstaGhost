@@ -1,10 +1,12 @@
 """Instagram client: session reuse, profile lookups, and media downloads."""
 
+import getpass
+import os
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 
-import requests
 from instagrapi import Client
 from instagrapi import exceptions as ig_exc
 
@@ -13,6 +15,15 @@ from .auth import LoginManager
 from .cache import load_profile, save_profile
 from .errors import LOGIN_ERRORS, RATE_LIMIT_ERRORS
 from .output import Colors, HackerStyle, LoadingAnimation
+
+MAX_COUNT = 30
+
+
+def _clamp_count(value, default):
+    try:
+        return max(1, min(int(value), MAX_COUNT))
+    except (TypeError, ValueError):
+        return default
 
 
 class InstaGhost:
@@ -24,39 +35,76 @@ class InstaGhost:
 
     def _load_session_file(self, username):
         """Attach a saved instagrapi session. No network call (lazy trust)."""
+        if not config.valid_username(username):
+            return False
         session_file = LoginManager.get_session_path(username)
         if not session_file.exists():
             return False
         try:
             self.cl.load_settings(str(session_file))
-            self.is_logged_in = True
-            self.login_user = username
-            return True
         except Exception:
             return False
-
-    def try_saved_session(self, username=None):
-        """Resume a saved session without a password prompt. Returns True on success."""
-        candidates = []
-        if username:
-            candidates.append(username)
-        saved_login = LoginManager.load_login_data()
-        if saved_login and saved_login.get('username') not in candidates:
-            candidates.append(saved_login['username'])
-        # Fall back to any session-* file (logindata may be missing)
         try:
-            for p in config.CONFIG_DIR.glob('session-*'):
-                name = p.name[len('session-'):]
-                if name and name not in candidates:
-                    candidates.append(name)
-        except Exception:
+            os.chmod(session_file, 0o600)
+        except OSError:
             pass
+        self.is_logged_in = True
+        self.login_user = username
+        return True
+
+    def try_saved_session(self, username=None, verify=False):
+        """Resume one saved session without guessing between accounts."""
+        if username:
+            candidates = [username]
+        else:
+            saved_login = LoginManager.load_login_data()
+            if saved_login:
+                candidates = [saved_login['username']]
+            else:
+                try:
+                    candidates = sorted(
+                        path.name[len('session-'):]
+                        for path in config.CONFIG_DIR.glob('session-*')
+                        if path.is_file()
+                        and config.valid_username(path.name[len('session-'):])
+                    )
+                except OSError:
+                    candidates = []
+                if len(candidates) > 1:
+                    HackerStyle.print_error(
+                        "Multiple saved sessions found - use --login-user to choose one"
+                    )
+                    return False
         for name in candidates:
             if self._load_session_file(name):
+                if verify and not self._verify_session(name):
+                    return False
                 return True
         return False
 
-    def login(self, username=None, password=None):
+    def _verify_session(self, username=None):
+        try:
+            info = self.cl.account_info()
+        except LOGIN_ERRORS:
+            self.is_logged_in = False
+            self.login_user = None
+            HackerStyle.print_warning("Saved session is no longer valid - logging in again")
+            return False
+        except Exception as e:
+            HackerStyle.print_warning(f"Could not verify saved session: {e}")
+            return True
+        if username and str(getattr(info, "username", "")).lower() != username.lower():
+            self.is_logged_in = False
+            self.login_user = None
+            HackerStyle.print_warning("Saved session belongs to a different account")
+            return False
+        return True
+
+    def _resume_session(self, username):
+        """Load a session for one account and verify it is still accepted."""
+        return self.try_saved_session(username, verify=True)
+
+    def login(self, username=None, password=None, save=False):
         """Login to Instagram account"""
         loading = None
         try:
@@ -68,20 +116,38 @@ class InstaGhost:
                 password = saved_login['password']
                 HackerStyle.print_info("Using saved login credentials")
 
-            # Reuse session file so we don't trigger a fresh login challenge
+            if username and not config.valid_username(username):
+                HackerStyle.print_error("Invalid Instagram username")
+                return False
+
+            # Reuse a verified session for this account so we don't trigger a fresh login
+            session_checked = False
             if username and not password:
-                if self.try_saved_session(username):
+                session_checked = True
+                if self._resume_session(username):
                     HackerStyle.print_success(f"Resumed saved session as @{self.login_user}")
                     return True
-                HackerStyle.print_error("Username and password required for login")
-                return False
+                if (saved_login
+                        and saved_login['username'].lower() == username.lower()):
+                    password = saved_login['password']
+                    HackerStyle.print_info("Using saved login credentials")
+                elif sys.stdin and sys.stdin.isatty():
+                    try:
+                        password = getpass.getpass(
+                            f"{Colors.YELLOW}Instagram password: {Colors.RESET}"
+                        )
+                    except EOFError:
+                        password = None
+                if not password:
+                    HackerStyle.print_error("Saved session missing or expired - password required")
+                    return False
 
             if not username or not password:
                 HackerStyle.print_error("Username and password required for login")
                 return False
 
             # Session reuse before password login
-            if self._load_session_file(username):
+            if not session_checked and self._resume_session(username):
                 HackerStyle.print_success(f"Resumed saved session as @{username}")
                 return True
 
@@ -101,12 +167,16 @@ class InstaGhost:
             loading.stop()
             loading = None
 
+            session_path = LoginManager.get_session_path(username)
             try:
-                self.cl.dump_settings(str(LoginManager.get_session_path(username)))
-            except Exception:
-                pass
+                self.cl.dump_settings(str(session_path))
+                os.chmod(session_path, 0o600)
+            except Exception as e:
+                HackerStyle.print_warning(f"Could not save session file: {e}")
             self.is_logged_in = True
             self.login_user = username
+            if save:
+                LoginManager.save_login_data(username, password)
             HackerStyle.print_success(f"Successfully logged in as @{username}")
             return True
 
@@ -151,6 +221,9 @@ class InstaGhost:
 
     def _resolve_user(self, username):
         """Fetch a user or print exactly why not. None on failure."""
+        if not config.valid_username(username):
+            HackerStyle.print_error("Invalid Instagram username")
+            return None
         if username in self._user_cache:
             return self._user_cache[username]
         try:
@@ -168,12 +241,18 @@ class InstaGhost:
         return None
 
     def get_profile_info(self, username):
+        if not config.valid_username(username):
+            HackerStyle.print_error("Invalid Instagram username")
+            return None
         loading = None
         try:
             loading = LoadingAnimation(f"Scanning target @{username}")
             loading.start()
 
-            user = self.cl.user_info_by_username(username)
+            user = self._user_cache.get(username)
+            if user is None:
+                user = self.cl.user_info_by_username(username)
+                self._user_cache[username] = user
             loading.stop()
             loading = None
 
@@ -248,148 +327,154 @@ class InstaGhost:
             return None
 
     def _download_media(self, media, folder):
-        """Download one media by type. Returns True on success."""
+        """Download one media from URLs already fetched. Returns True on success."""
         folder = Path(folder)
         folder.mkdir(parents=True, exist_ok=True)
         try:
+            username = getattr(getattr(media, "user", None), "username", "media")
             if media.media_type == 8:
-                self.cl.album_download(media.pk, folder)
+                resources = list(getattr(media, "resources", None) or [])
+                if not resources:
+                    raise ValueError("Album has no resources")
+                for resource in resources:
+                    url = resource.thumbnail_url if resource.media_type == 1 else resource.video_url
+                    if not url:
+                        raise ValueError("Media URL is empty")
+                    name = f"{username}_{resource.pk}"
+                    if resource.media_type == 1:
+                        self.cl.photo_download_by_url(str(url), name, folder)
+                    elif resource.media_type == 2:
+                        self.cl.video_download_by_url(str(url), name, folder)
+                    else:
+                        raise ValueError("Unsupported album item")
             elif media.media_type == 2:
+                url = media.video_url
+                if not url:
+                    raise ValueError("Video URL is empty")
+                name = f"{username}_{media.pk}"
                 if getattr(media, 'product_type', '') == 'clips':
-                    self.cl.clip_download(media.pk, folder)
+                    self.cl.clip_download_by_url(str(url), name, folder)
                 else:
-                    self.cl.video_download(media.pk, folder)
+                    self.cl.video_download_by_url(str(url), name, folder)
             else:
-                self.cl.photo_download(media.pk, folder)
+                url = media.thumbnail_url
+                if not url:
+                    raise ValueError("Photo URL is empty")
+                self.cl.photo_download_by_url(str(url), f"{username}_{media.pk}", folder)
             return True
         except Exception as e:
             HackerStyle.print_warning(f"Skipped one item: {e}")
             return False
 
     def download_profile_pic(self, username, output_dir="downloads"):
+        if not config.valid_username(username):
+            HackerStyle.print_error("Invalid Instagram username")
+            return None
         user = self._resolve_user(username)
         if not user:
             return None
         try:
             HackerStyle.print_info("Extracting profile picture...")
-            pic_url = str(getattr(user, 'profile_pic_url_hd', None) or user.profile_pic_url)
+            pic_url = getattr(user, 'profile_pic_url_hd', None) or user.profile_pic_url
+            if not pic_url:
+                raise ValueError("Profile picture URL is empty")
 
-            Path(output_dir).mkdir(parents=True, exist_ok=True)
-
-            response = requests.get(pic_url, timeout=30)
-            response.raise_for_status()
-            filename = f"{output_dir}/{username}_profile_pic.jpg"
-
-            with open(filename, 'wb') as f:
-                f.write(response.content)
+            target = Path(output_dir)
+            target.mkdir(parents=True, exist_ok=True)
+            filename = self.cl.photo_download_by_url(
+                str(pic_url), f"{username}_profile_pic", target
+            )
 
             HackerStyle.print_success(f"Profile picture extracted: {filename}")
-            return filename
+            return str(filename)
         except Exception as e:
             HackerStyle.print_error(f"Extraction failed: {e}")
             return None
+
+    def _download_collection(self, username, kind, fetch, output_dir, label):
+        """Download a list of media. Returns False when nothing was downloaded."""
+        try:
+            items = list(fetch())
+        except ig_exc.PrivateError:
+            HackerStyle.print_error("Private account - you don't follow it or login is required")
+            return False
+        except RATE_LIMIT_ERRORS as e:
+            HackerStyle.print_error(f"Rate-limited: {e} - wait, then retry with --login")
+            return False
+        except LOGIN_ERRORS:
+            HackerStyle.print_error("Login required - run with --login first")
+            return False
+        except Exception as e:
+            HackerStyle.print_error(f"Download failed: {e}")
+            return False
+
+        target = Path(output_dir) / username / kind
+        done = 0
+        for item in items:
+            if kind == "stories":
+                try:
+                    url = item.thumbnail_url if item.media_type == 1 else item.video_url
+                    if not url:
+                        raise ValueError("Story URL is empty")
+                    target.mkdir(parents=True, exist_ok=True)
+                    self.cl.story_download_by_url(
+                        str(url), f"{username}_{item.pk}", target
+                    )
+                    done += 1
+                except Exception as e:
+                    HackerStyle.print_warning(f"Skipped one story: {e}")
+            elif self._download_media(item, target):
+                done += 1
+
+        HackerStyle.print_success(f"Downloaded {done} {label}")
+        if done == 0 and items:
+            HackerStyle.print_error(f"Nothing downloaded - {len(items)} {label} failed")
+            return False
+        return done > 0 or not items
 
     def download_posts(self, username, count=10, output_dir="downloads"):
         user = self._resolve_user(username)
         if not user:
             return False
-        try:
-            if user.is_private and not self.is_logged_in:
-                HackerStyle.print_error("Private account - login required")
-                return False
-
-            HackerStyle.print_info(f"Downloading {count} posts...")
-
-            target = Path(output_dir) / username / "posts"
-            done = sum(
-                self._download_media(m, target)
-                for m in self.cl.user_medias(str(user.pk), count)
-            )
-
-            HackerStyle.print_success(f"Downloaded {done} posts")
-            return True
-        except ig_exc.PrivateError:
-            HackerStyle.print_error("Private account - you don't follow it or login is required")
+        if user.is_private and not self.is_logged_in:
+            HackerStyle.print_error("Private account - login required")
             return False
-        except RATE_LIMIT_ERRORS as e:
-            HackerStyle.print_error(f"Rate-limited: {e} - wait, then retry with --login")
-            return False
-        except LOGIN_ERRORS:
-            HackerStyle.print_error("Login required - run with --login first")
-            return False
-        except Exception as e:
-            HackerStyle.print_error(f"Download failed: {e}")
-            return False
+        count = _clamp_count(count, 10)
+        HackerStyle.print_info(f"Downloading up to {count} posts...")
+        return self._download_collection(
+            username, "posts",
+            lambda: self.cl.user_medias(str(user.pk), count),
+            output_dir, "posts",
+        )
 
     def download_reels(self, username, count=5, output_dir="downloads"):
         user = self._resolve_user(username)
         if not user:
             return False
-        try:
-            if user.is_private and not self.is_logged_in:
-                HackerStyle.print_error("Private account - login required")
-                return False
-
-            HackerStyle.print_info(f"Downloading {count} reels...")
-
-            target = Path(output_dir) / username / "reels"
-            done = sum(
-                self._download_media(m, target)
-                for m in self.cl.user_clips(str(user.pk), count)
-            )
-
-            HackerStyle.print_success(f"Downloaded {done} reels")
-            return True
-        except ig_exc.PrivateError:
-            HackerStyle.print_error("Private account - you don't follow it or login is required")
+        if user.is_private and not self.is_logged_in:
+            HackerStyle.print_error("Private account - login required")
             return False
-        except RATE_LIMIT_ERRORS as e:
-            HackerStyle.print_error(f"Rate-limited: {e} - wait, then retry with --login")
-            return False
-        except LOGIN_ERRORS:
-            HackerStyle.print_error("Login required - run with --login first")
-            return False
-        except Exception as e:
-            HackerStyle.print_error(f"Download failed: {e}")
-            return False
+        count = _clamp_count(count, 5)
+        HackerStyle.print_info(f"Downloading up to {count} reels...")
+        return self._download_collection(
+            username, "reels",
+            lambda: self.cl.user_clips(str(user.pk), count),
+            output_dir, "reels",
+        )
 
     def download_stories(self, username, output_dir="downloads"):
         user = self._resolve_user(username)
         if not user:
             return False
-        try:
-            if user.is_private and not self.is_logged_in:
-                HackerStyle.print_error("Private account - login required")
-                return False
-
-            HackerStyle.print_info("Downloading stories...")
-
-            target = Path(output_dir) / username / "stories"
-            target.mkdir(parents=True, exist_ok=True)
-
-            stories = self.cl.user_stories(str(user.pk))
-            done = 0
-            for s in stories:
-                try:
-                    self.cl.story_download(s.pk, folder=target)
-                    done += 1
-                except Exception as e:
-                    HackerStyle.print_warning(f"Skipped one story: {e}")
-
-            HackerStyle.print_success(f"Downloaded {done} stories")
-            return True
-        except ig_exc.PrivateError:
-            HackerStyle.print_error("Private account - you don't follow it or login is required")
+        if user.is_private and not self.is_logged_in:
+            HackerStyle.print_error("Private account - login required")
             return False
-        except RATE_LIMIT_ERRORS as e:
-            HackerStyle.print_error(f"Rate-limited: {e} - wait, then retry with --login")
-            return False
-        except LOGIN_ERRORS:
-            HackerStyle.print_error("Login required - run with --login first")
-            return False
-        except Exception as e:
-            HackerStyle.print_warning(f"Stories download failed: {e}")
-            return False
+        HackerStyle.print_info("Downloading stories...")
+        return self._download_collection(
+            username, "stories",
+            lambda: self.cl.user_stories(str(user.pk)),
+            output_dir, "stories",
+        )
 
     def download_from_url(self, url, output_dir="downloads"):
         """Download specific post or reel from URL"""
@@ -410,7 +495,9 @@ class InstaGhost:
 
             HackerStyle.print_info(f"Downloading: {media.code if media.code else 'Instagram Post'}")
 
-            self._download_media(media, Path(output_dir))
+            if not self._download_media(media, Path(output_dir)):
+                HackerStyle.print_error("Download failed - media URL was not available")
+                return False
 
             HackerStyle.print_success(f"Downloaded post to {output_dir}")
             return True
@@ -437,19 +524,9 @@ class InstaGhost:
             return False
 
     def extract_shortcode_from_url(self, url):
-        """Extract Instagram shortcode from various URL formats"""
-        patterns = [
-            r'(?<!\w)instagram\.com/p/([^/?#&]+)',
-            r'(?<!\w)instagram\.com/reels?/([^/?#&]+)',
-            r'(?<!\w)instagram\.com/stories/[^/]+/([^/?#&]+)',
-            r'(?<!\w)instagram\.com/tv/([^/?#&]+)',
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, url)
-            if match:
-                return match.group(1)
-        return None
+        """Extract an Instagram post/reel/tv shortcode (stories are unsupported)."""
+        match = re.search(r'(?<!\w)instagram\.com/(?:p|reels?|tv|share/p)/([^/?#&]+)', url)
+        return match.group(1) if match else None
 
     def print_profile_info(self, profile_info):
         if not profile_info:
@@ -485,7 +562,7 @@ class InstaGhost:
 
         print(f"{Colors.PURPLE}{'═'*60}{Colors.RESET}")
 
-    def interactive_menu(self, profile_info):
+    def interactive_menu(self, profile_info, output_dir="downloads"):
         if not profile_info:
             return
 
@@ -509,28 +586,26 @@ class InstaGhost:
             choice = input(f"\n{Colors.YELLOW}🛠️  Select operation: {Colors.RESET}").strip()
 
             if choice == '1':
-                self.download_profile_pic(profile_info['username'])
+                self.download_profile_pic(profile_info['username'], output_dir)
             elif choice == '2':
-                count = input(f"{Colors.YELLOW}📦 Number of posts: {Colors.RESET}").strip()
-                count = int(count) if count.isdigit() else 10
-                self.download_posts(profile_info['username'], count)
+                count = input(f"{Colors.YELLOW}📦 Number of posts (1-{MAX_COUNT}): {Colors.RESET}").strip()
+                self.download_posts(profile_info['username'], count or 10, output_dir)
             elif choice == '3':
-                count = input(f"{Colors.YELLOW}🎥 Number of reels: {Colors.RESET}").strip()
-                count = int(count) if count.isdigit() else 5
-                self.download_reels(profile_info['username'], count)
+                count = input(f"{Colors.YELLOW}🎥 Number of reels (1-{MAX_COUNT}): {Colors.RESET}").strip()
+                self.download_reels(profile_info['username'], count or 5, output_dir)
             elif choice == '4':
-                self.download_stories(profile_info['username'])
+                self.download_stories(profile_info['username'], output_dir)
             elif choice == '5':
-                self.download_profile_pic(profile_info['username'])
-                self.download_posts(profile_info['username'], 10)
-                self.download_reels(profile_info['username'], 5)
-                self.download_stories(profile_info['username'])
+                self.download_profile_pic(profile_info['username'], output_dir)
+                self.download_posts(profile_info['username'], 10, output_dir)
+                self.download_reels(profile_info['username'], 5, output_dir)
+                self.download_stories(profile_info['username'], output_dir)
             elif choice == '6':
                 self.print_profile_info(profile_info)
             elif choice == '7':
                 url = input(f"{Colors.YELLOW}🔗 Enter Instagram URL: {Colors.RESET}").strip()
                 if url:
-                    self.download_from_url(url)
+                    self.download_from_url(url, output_dir)
             elif choice == '8':
                 self.login_menu()
             elif choice == '0':
@@ -547,30 +622,21 @@ class InstaGhost:
 
         print(f"  {Colors.CYAN}1{Colors.RESET} - Login with credentials")
         print(f"  {Colors.CYAN}2{Colors.RESET} - Login with saved data")
-        print(f"  {Colors.CYAN}3{Colors.RESET} - Save current login")
-        print(f"  {Colors.CYAN}4{Colors.RESET} - Clear saved login")
-        print(f"  {Colors.CYAN}5{Colors.RESET} - Check login status")
+        print(f"  {Colors.CYAN}3{Colors.RESET} - Clear saved login")
+        print(f"  {Colors.CYAN}4{Colors.RESET} - Check login status")
 
         choice = input(f"\n{Colors.YELLOW}Select option: {Colors.RESET}").strip()
 
         if choice == '1':
             username = input(f"{Colors.YELLOW}Username: {Colors.RESET}").strip()
-            password = input(f"{Colors.YELLOW}Password: {Colors.RESET}").strip()
+            password = getpass.getpass(f"{Colors.YELLOW}Password: {Colors.RESET}")
             if username and password:
                 self.login(username, password)
         elif choice == '2':
             self.login()  # Use saved credentials
         elif choice == '3':
-            if self.is_logged_in:
-                username = input(f"{Colors.YELLOW}Username to save: {Colors.RESET}").strip()
-                password = input(f"{Colors.YELLOW}Password to save: {Colors.RESET}").strip()
-                if username and password:
-                    LoginManager.save_login_data(username, password)
-            else:
-                HackerStyle.print_error("Not logged in")
-        elif choice == '4':
             LoginManager.clear_login_data()
-        elif choice == '5':
+        elif choice == '4':
             status = "Logged in" if self.is_logged_in else "Not logged in"
             color = Colors.GREEN if self.is_logged_in else Colors.RED
             HackerStyle.print_info(f"Login status: {color}{status}{Colors.RESET}")

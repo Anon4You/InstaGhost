@@ -1,0 +1,55 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m pip install -e .
+      - run: python -m unittest discover -s tests -v
+      - run: python -m build
+      - name: Build release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          tag = os.environ["TAG"]
+          version = tag[1:] if tag.startswith("v") else tag
+          sys.path.insert(0, "src")
+          from instaghost import __version__
+          if version != __version__:
+              raise SystemExit(f"Tag {tag} does not match package version {__version__}")
+          changelog = Path("CHANGELOG.md").read_text()
+          match = re.search(rf"^##\s+{re.escape(version)}\s*$", changelog, re.M)
+          if not match:
+              raise SystemExit(f"No CHANGELOG.md section for {version}")
+          rest = changelog[match.end():]
+          following = re.search(r"^##\s+", rest, re.M)
+          notes = (rest[:following.start()] if following else rest).strip()
+          if not notes:
+              raise SystemExit(f"CHANGELOG.md section for {version} is empty")
+          Path("RELEASE_NOTES.md").write_text(f"# InstaGhost {version}\n\n{notes}\n")
+          PY
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: InstaGhost ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: dist/*
+          fail_on_unmatched_files: true

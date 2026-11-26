@@ -4,6 +4,8 @@ Owner-only long polling. Reuses the session from `instaghost --login` on the
 host; never asks for Instagram credentials in chat.
 """
 
+import getpass
+import json
 import os
 import shutil
 import sys
@@ -11,7 +13,8 @@ import time
 
 import requests
 
-from .gateway import job_files, parse_command, run_job
+from . import config
+from .gateway import job_files, parse_command, prune_jobs, run_job
 
 HELP = """InstaGhost commands:
 /profile <user>      profile report
@@ -27,8 +30,97 @@ Uses the host session. Run `instaghost --login ...` on the server first."""
 MAX_FILE = 50 * 1024 * 1024
 
 
+def _parse_allowed(raw):
+    values = (raw or "").replace(",", " ").split()
+    return {int(value) for value in values}
+
+
+def _load_saved_settings():
+    path = config.telegram_config_path()
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return None, None
+        token = data.get("token")
+        user_ids = data.get("user_ids")
+        if isinstance(token, str) and token.strip() and isinstance(user_ids, list) and user_ids:
+            return token.strip(), {int(value) for value in user_ids}
+    except (OSError, ValueError, TypeError):
+        pass
+    return None, None
+
+
+def _save_settings(token, allowed):
+    path = config.telegram_config_path()
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w") as f:
+            json.dump({"token": token, "user_ids": sorted(allowed)}, f)
+        os.chmod(path, 0o600)
+        print(f"Saved Telegram settings to {path}")
+        return True
+    except OSError as e:
+        print(f"Could not save Telegram settings: {e}")
+        return False
+
+
+def _resolve_settings():
+    saved_token, saved_allowed = _load_saved_settings()
+    env_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    env_allowed_raw = os.environ.get("TELEGRAM_ALLOWED_USER_ID", "").strip()
+
+    token = env_token or saved_token
+    allowed = saved_allowed
+    prompted = False
+
+    if not token:
+        token = getpass.getpass("Telegram bot token: ").strip()
+        prompted = True
+    if not token:
+        sys.exit("A Telegram bot token is required.")
+
+    if env_allowed_raw:
+        try:
+            allowed = _parse_allowed(env_allowed_raw)
+        except ValueError:
+            sys.exit("TELEGRAM_ALLOWED_USER_ID must be numeric ids, e.g. 123456789.")
+    elif not allowed:
+        raw = input("Telegram user ID(s), comma-separated: ").strip()
+        while True:
+            try:
+                allowed = _parse_allowed(raw)
+                if allowed:
+                    break
+            except ValueError:
+                pass
+            raw = input("Numeric Telegram user ID(s), comma-separated: ").strip()
+        prompted = True
+
+    if prompted:
+        _save_settings(token, allowed)
+    return token, allowed
+
+
+def _redact(text, token):
+    return str(text).replace(token, "<token>") if token else str(text)
+
+
+def _check_token(bot, token):
+    try:
+        result = bot.call("getMe", timeout=15)
+    except Exception as e:
+        sys.exit(f"Telegram connection failed: {_redact(e, token)}")
+    if not isinstance(result, dict) or not result.get("ok"):
+        description = result.get("description") if isinstance(result, dict) else "invalid response"
+        sys.exit(f"Telegram rejected the bot token: {_redact(description, token)}")
+
+
 class Bot:
     def __init__(self, token, allowed):
+        self.token = token
         self.api = f"https://api.telegram.org/bot{token}/"
         self.allowed = allowed
         self.http = requests.Session()
@@ -67,8 +159,13 @@ class Bot:
         time.sleep(1)
 
     def handle(self, message):
-        chat_id = message["chat"]["id"]
-        if message.get("from", {}).get("id") not in self.allowed:
+        chat = message.get("chat") or {}
+        if chat.get("type") != "private":
+            return
+        chat_id = chat.get("id")
+        if chat_id is None:
+            return
+        if (message.get("from") or {}).get("id") not in self.allowed:
             self.send_text(chat_id, "Not allowed.")
             return
         parsed = parse_command(message.get("text"))
@@ -95,22 +192,15 @@ class Bot:
                     self.send_file(chat_id, path)
             finally:
                 shutil.rmtree(jobdir, ignore_errors=True)
+        prune_jobs()
 
 
 def main():
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-    allowed_raw = os.environ.get("TELEGRAM_ALLOWED_USER_ID", "").replace(",", " ").split()
-    if not token or not allowed_raw:
-        sys.exit(
-            "Set TELEGRAM_BOT_TOKEN and TELEGRAM_ALLOWED_USER_ID "
-            "(your numeric Telegram user id) before starting the bot."
-        )
-    try:
-        allowed = {int(value) for value in allowed_raw}
-    except ValueError:
-        sys.exit("TELEGRAM_ALLOWED_USER_ID must be numeric ids, e.g. 123456789.")
+    token, allowed = _resolve_settings()
 
     bot = Bot(token, allowed)
+    _check_token(bot, token)
+    prune_jobs()
     print("InstaGhost Telegram bot polling. Ctrl-C to stop.")
     offset = None
     try:
@@ -125,11 +215,11 @@ def main():
             except KeyboardInterrupt:
                 raise
             except Exception as e:
-                print(f"Polling error: {e}")
+                print(f"Polling error: {_redact(e, token)}")
                 time.sleep(5)
                 continue
             if not data.get("ok"):
-                print(f"Telegram error: {data.get('description')}")
+                print(f"Telegram error: {_redact(data.get('description'), token)}")
                 time.sleep(5)
                 continue
             for update in data.get("result", []):
@@ -142,7 +232,7 @@ def main():
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
-                    print(f"Handler error: {e}")
+                    print(f"Handler error: {_redact(e, token)}")
     except KeyboardInterrupt:
         print("\nStopped.")
 

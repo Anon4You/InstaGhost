@@ -9,18 +9,21 @@ import io
 import re
 import shutil
 import tempfile
+import time
 from pathlib import Path
+
+from .config import valid_username
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows
+    fcntl = None
 
 JOB_ROOT = Path.home() / ".cache" / "instaghost-gateway"
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
-USERNAME_RE = re.compile(r"^(?!\.+$)[A-Za-z0-9._]{1,30}$")
 JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 ACTIONS = ("profile", "pic", "posts", "reels", "stories", "url", "all")
-
-
-def valid_username(name):
-    return bool(USERNAME_RE.fullmatch(name or ""))
 
 
 def clean_output(text):
@@ -67,6 +70,37 @@ def job_files(jobdir):
     return sorted(p for p in Path(jobdir).rglob("*") if p.is_file())
 
 
+@contextlib.contextmanager
+def job_lock():
+    """Serialize jobs across the web and Telegram processes."""
+    JOB_ROOT.mkdir(parents=True, exist_ok=True)
+    lock_file = JOB_ROOT / "job.lock"
+    with open(lock_file, "w") as handle:
+        if fcntl:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if fcntl:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def prune_jobs(max_age=7 * 24 * 60 * 60):
+    """Delete job folders older than max_age seconds."""
+    if not JOB_ROOT.exists():
+        return 0
+    cutoff = time.time() - max_age
+    removed = 0
+    for path in JOB_ROOT.iterdir():
+        try:
+            if path.is_dir() and path.stat().st_mtime < cutoff:
+                shutil.rmtree(path, ignore_errors=True)
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def run_job(action, username=None, count=5, url=None):
     """Run one action with the saved session. Returns (ok, text, jobdir)."""
     from .client import InstaGhost
@@ -85,41 +119,41 @@ def run_job(action, username=None, count=5, url=None):
     except (TypeError, ValueError):
         count = 5
 
-    LoadingAnimation.enabled = False
-    jobdir = None
-    if action != "profile":
-        JOB_ROOT.mkdir(parents=True, exist_ok=True)
-        jobdir = Path(tempfile.mkdtemp(prefix="job-", dir=str(JOB_ROOT)))
-
-    out = io.StringIO()
-    tool = InstaGhost()
-    with contextlib.redirect_stdout(out):
-        tool.try_saved_session()
-        if not tool.is_logged_in:
-            print("No saved session. On the host run: instaghost --login ...")
-        if action == "profile":
-            info = tool.get_profile_info(username)
-            if info:
-                tool.print_profile_info(info)
-            ok = bool(info)
-        elif action == "url":
-            ok = bool(tool.download_from_url(url, str(jobdir)))
-        else:
-            ok = True
-            if action in ("pic", "all"):
-                ok = bool(tool.download_profile_pic(username, str(jobdir))) and ok
-            if action in ("posts", "all"):
-                ok = tool.download_posts(username, count if action == "posts" else 10, str(jobdir)) and ok
-            if action in ("reels", "all"):
-                ok = tool.download_reels(username, count if action == "reels" else 5, str(jobdir)) and ok
-            if action in ("stories", "all"):
-                ok = tool.download_stories(username, str(jobdir)) and ok
-
-    text = clean_output(out.getvalue())
-    files = job_files(jobdir) if jobdir else []
-    if jobdir and not files:
-        shutil.rmtree(jobdir, ignore_errors=True)
+    with job_lock():
+        LoadingAnimation.enabled = False
         jobdir = None
-        ok = False
-        text = (text + "\nNothing was downloaded.").strip()
-    return ok, text, jobdir
+        if action != "profile":
+            jobdir = Path(tempfile.mkdtemp(prefix="job-", dir=str(JOB_ROOT)))
+
+        out = io.StringIO()
+        tool = InstaGhost()
+        with contextlib.redirect_stdout(out):
+            tool.try_saved_session(verify=True)
+            if not tool.is_logged_in:
+                print("No saved session. On the host run: instaghost --login ...")
+            if action == "profile":
+                info = tool.get_profile_info(username)
+                if info:
+                    tool.print_profile_info(info)
+                ok = bool(info)
+            elif action == "url":
+                ok = bool(tool.download_from_url(url, str(jobdir)))
+            else:
+                ok = True
+                if action in ("pic", "all"):
+                    ok = bool(tool.download_profile_pic(username, str(jobdir))) and ok
+                if action in ("posts", "all"):
+                    ok = tool.download_posts(username, count if action == "posts" else 10, str(jobdir)) and ok
+                if action in ("reels", "all"):
+                    ok = tool.download_reels(username, count if action == "reels" else 5, str(jobdir)) and ok
+                if action in ("stories", "all"):
+                    ok = tool.download_stories(username, str(jobdir)) and ok
+
+        text = clean_output(out.getvalue())
+        files = job_files(jobdir) if jobdir else []
+        if jobdir and not files:
+            shutil.rmtree(jobdir, ignore_errors=True)
+            jobdir = None
+            ok = False
+            text = (text + "\nNothing was downloaded.").strip()
+        return ok, text, jobdir

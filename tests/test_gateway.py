@@ -1,12 +1,18 @@
+import os
 import sys
+import tempfile
+import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from instaghost import gateway  # noqa: E402
 from instaghost.gateway import (  # noqa: E402
     clean_output,
     parse_command,
+    prune_jobs,
     resolve_job_file,
     run_job,
     valid_username,
@@ -21,6 +27,8 @@ class Validators(unittest.TestCase):
         self.assertFalse(valid_username("bad/name"))
         self.assertFalse(valid_username("a" * 31))
         self.assertFalse(valid_username(""))
+        self.assertFalse(valid_username(None))
+        self.assertFalse(valid_username(123))
 
     def test_commands(self):
         self.assertEqual(parse_command("/profile foo"), ("profile", {"username": "foo"}))
@@ -46,6 +54,19 @@ class Validators(unittest.TestCase):
         self.assertFalse(run_job("nope")[0])
         self.assertFalse(run_job("posts", username="../x")[0])
         self.assertFalse(run_job("url", url="ftp://example.com/a")[0])
+
+    def test_prune_jobs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old = Path(tmp) / "old"
+            new = Path(tmp) / "new"
+            old.mkdir()
+            new.mkdir()
+            old_time = time.time() - 8 * 24 * 60 * 60
+            os.utime(old, (old_time, old_time))
+            with mock.patch.object(gateway, "JOB_ROOT", Path(tmp)):
+                self.assertEqual(prune_jobs(), 1)
+            self.assertFalse(old.exists())
+            self.assertTrue(new.exists())
 
 
 if __name__ == "__main__":

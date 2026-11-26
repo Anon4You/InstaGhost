@@ -19,6 +19,11 @@ class Auth(unittest.TestCase):
         self.assertFalse(web.authorized("/", ""))
 
 
+class Server(unittest.TestCase):
+    def test_handler_timeout(self):
+        self.assertEqual(web.Handler.timeout, 30)
+
+
 class Rendering(unittest.TestCase):
     def test_result_page_escapes(self):
         page = web._result_content(

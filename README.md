@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-2.1.0-green.svg" alt="Version 2.1.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-2.2.0-green.svg" alt="Version 2.2.0"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.8%2B-yellow.svg" alt="Python 3.8+"></a>
 </p>
 
@@ -81,7 +81,7 @@ send them through Telegram, and the web gateway binds to loopback by default.
 | Interactive mode | Numbered terminal menu for repeated operations. |
 | Web gateway | Token link, HttpOnly cookie auth, job runner, gallery, and one job at a time. |
 | Telegram bot | Numeric owner allowlist, long polling, direct media delivery, and temp-file cleanup. |
-| Automation friendly | Sensible exit codes and no interactive prompts unless a job needs 2FA. |
+| Automation friendly | Sensible exit codes; the CLI only prompts for a missing password or 2FA, and the bot only prompts for missing settings. |
 
 ---
 
@@ -102,8 +102,8 @@ send them through Telegram, and the web gateway binds to loopback by default.
 Runtime dependencies are declared in `pyproject.toml`:
 
 ```text
-instagrapi>=2.0
-requests>=2.25.1
+instagrapi>=2.0,<4
+requests>=2.25.1,<3
 ```
 
 ---
@@ -264,9 +264,10 @@ session on every later CLI or gateway run.
 | --- | --- |
 | `instaghost --login --login-user U --login-pass P` | Logs in and saves a session. Does not store the password unless `--save-login` is also used. |
 | `instaghost --login --login-user U --login-pass P --save-login` | Logs in, saves the session, and writes credentials to `logindata`. |
-| `instaghost --login` | Uses saved credentials when present; otherwise reports that a username and password are required. |
-| `instaghost --login --login-user U` | Resumes the saved session for `U`; errors if no session exists. |
-| `instaghost TARGET` | Automatically reuses any saved session before looking up the target. |
+| `instaghost --login` | Uses saved credentials when present; otherwise prompts for a username and a hidden password. |
+| `instaghost --login --login-user U` | Resumes the saved session for `U`; if it is missing or expired, prompts for the password (hidden input). |
+| `instaghost TARGET` | Reuses the saved session. If several sessions exist without saved credentials, it stops instead of guessing. |
+| `instaghost --logout` | Removes saved credentials and all `session-*` files. |
 
 Session files live at:
 
@@ -321,20 +322,24 @@ instaghost --url <instagram_url>
 instaghost --login
 ```
 
+If no saved credentials exist, `--login` prompts for the username and reads
+the password with hidden input, so it is not stored in shell history.
+
 | Option | Argument | Description |
 | --- | --- | --- |
 | `<username>` | Username | Target profile. Accepts letters, digits, dots, and underscores (1–30 characters). |
 | `-i, --interactive` | — | Open the interactive menu after printing the profile report. |
 | `-p, --profile-pic` | — | Download the full-size profile picture. |
-| `-P, --posts` | Count | Number of latest posts to download. Required. |
-| `-r, --reels` | Count | Number of latest reels to download. Required. |
+| `-P, --posts` | Count | Number of latest posts to download (1–30; default 10 with `-a`). |
+| `-r, --reels` | Count | Number of latest reels to download (1–30; default 5 with `-a`). |
 | `-s, --stories` | — | Download active stories. |
 | `-a, --all` | — | Download the profile picture, 10 posts, 5 reels, and stories. |
 | `-o, --output` | Directory | Output directory. Default: `downloads`. |
 | `-l, --login` | — | Run the login flow before the requested operation. |
 | `--login-user` | Username | Instagram username for login. |
-| `--login-pass` | Password | Instagram password for login. |
+| `--login-pass` | Password | Instagram password for login. Prefer the hidden prompt: command-line values can appear in shell history and process lists. |
 | `--save-login` | — | Save credentials to `logindata` after a successful login. |
+| `--logout` | — | Remove saved credentials and all saved sessions. |
 | `--url` | URL | Download a post, reel, or TV item from an Instagram URL. |
 | `--private` | — | Access a private account using the saved session. |
 | `-h, --help` | — | Print the command reference and exit. |
@@ -349,6 +354,7 @@ https://www.instagram.com/p/SHORTCODE/
 https://www.instagram.com/reel/SHORTCODE/
 https://www.instagram.com/reels/SHORTCODE/
 https://www.instagram.com/tv/SHORTCODE/
+https://www.instagram.com/share/p/SHORTCODE/
 ```
 
 Story URLs are not supported by `--url`; use `-s` to download active stories.
@@ -407,8 +413,8 @@ The profile report is printed first, then the menu:
 | Choice | Operation |
 | --- | --- |
 | `1` | Download profile picture |
-| `2` | Download posts (prompts for a count; default 10) |
-| `3` | Download reels (prompts for a count; default 5) |
+| `2` | Download posts (prompts for a count 1–30; default 10) |
+| `3` | Download reels (prompts for a count 1–30; default 5) |
 | `4` | Download stories |
 | `5` | Download everything |
 | `6` | Show profile intelligence again |
@@ -416,8 +422,8 @@ The profile report is printed first, then the menu:
 | `8` | Login operations |
 | `0` | Exit |
 
-Login operations include credential login, saved-data login, saving the current
-login, clearing saved credentials, and checking login status.
+Login operations include credential login (password input is hidden),
+saved-data login, clearing saved credentials, and checking login status.
 
 ---
 
@@ -444,11 +450,12 @@ by `instagrapi`.
 
 | Data | Location | Notes |
 | --- | --- | --- |
-| Session settings | `~/.config/instaghost/session-<user>` | Grants account access. Do not share. |
+| Session settings | `~/.config/instaghost/session-<user>` | Grants account access; mode `0600`. Do not share. |
 | Saved credentials | `~/.config/instaghost/logindata` | Only with `--save-login`; plaintext JSON, mode `0600`. |
 | Cached profile info | `~/.config/instaghost/profile-<user>.json` | Non-sensitive lookup cache. |
-| Web gateway jobs | `~/.cache/instaghost-gateway/job-*` | Retained until you delete them. |
+| Web gateway jobs | `~/.cache/instaghost-gateway/job-*` | Pruned after 7 days. |
 | Telegram bot jobs | Temporary `job-*` folders | Deleted after the bot sends files. |
+| Telegram settings | `~/.config/instaghost/telegram.json` | Bot token and owner IDs, mode `0600`. |
 
 See [SECURITY.md](SECURITY.md) for credential handling and reporting guidance.
 
@@ -506,7 +513,9 @@ Default behavior:
   it directly to untrusted networks. For remote use, place it behind a trusted
   HTTPS reverse proxy or tunnel.
 - It never asks for an Instagram password.
-- Web jobs stay under `~/.cache/instaghost-gateway/` until you remove them.
+- Web jobs stay under `~/.cache/instaghost-gateway/` and are pruned after 7 days.
+- The web and Telegram gateways share a job lock, so only one job runs at a time
+  across both processes.
 - Stop the server with `Ctrl-C`.
 
 ---
@@ -520,7 +529,17 @@ Telegram. Owner allowlisting is mandatory.
 
 1. Create a bot with Telegram's BotFather and copy its token.
 2. Find your numeric Telegram user ID (for example, from a bot that reports IDs).
-3. Export both values in the environment that runs the bot:
+3. Run the bot:
+
+```bash
+instaghost-bot
+```
+
+If the token or user ID is missing, the bot prompts for it and saves both to
+`~/.config/instaghost/telegram.json` (mode `0600`), so later runs start without
+prompting.
+
+Environment variables override the saved settings and skip their prompts:
 
 ```bash
 export TELEGRAM_BOT_TOKEN="123456789:ABCdef..."
@@ -534,8 +553,7 @@ Multiple allowed IDs are supported, separated by commas or spaces:
 export TELEGRAM_ALLOWED_USER_ID="123456789,987654321"
 ```
 
-The bot exits at startup with a clear message if either variable is missing or
-if an allowed ID is not numeric.
+An invalid exported user ID exits with a clear message.
 
 ### Commands
 
@@ -552,13 +570,15 @@ if an allowed ID is not numeric.
 
 ### Limits and behavior
 
-- Only IDs in `TELEGRAM_ALLOWED_USER_ID` are accepted; every other user gets
-  `Not allowed`.
+- Only configured owner IDs are accepted; every other user gets `Not allowed`.
+- Commands are accepted only in a private chat with the bot; group chats are ignored.
+- The token is checked with Telegram at startup, so an invalid token fails clearly.
 - Long polling is used; no webhook or public port is required.
 - Files over Telegram's 50 MB bot limit are skipped with a message.
 - Photos up to 10 MB use `sendPhoto`; larger photos and other files use
   `sendDocument`. MP4 files use `sendVideo` with a document fallback.
-- Temporary job folders are deleted after the bot sends the results.
+- Temporary job folders are deleted after the bot sends the results, and old
+  job folders are pruned at startup.
 - Media delivered through Telegram leaves your machine and is handled by
   Telegram's servers.
 
@@ -615,8 +635,12 @@ src/instaghost/
 ├── webui/            HTML templates, CSS, JS, favicon
 └── telegram_bot.py   Telegram long-polling bot
 tests/
-├── test_gateway.py   validation and command parsing
-└── test_web.py       authentication, escaping, and UI files
+├── test_auth.py          credential storage and permissions
+├── test_cli.py           argument validation, logout, Ctrl-C
+├── test_client.py        downloads, sessions, caching, URL parsing
+├── test_gateway.py       validation, command parsing, job pruning
+├── test_telegram_bot.py  token checks, private chats, saved settings
+└── test_web.py           authentication, escaping, UI files, timeout
 docs/                 README assets
 pyproject.toml        packaging, entry points, and package data
 SECURITY.md           credential and vulnerability guidance
@@ -658,6 +682,17 @@ To verify that a distribution includes the web UI:
 python -m pip wheel . --no-deps -w dist
 python -m zipfile -l dist/instaghost-*.whl | grep webui
 ```
+
+Releases are tag-driven, not triggered by version bumps. After updating
+`CHANGELOG.md`, push a matching tag:
+
+```bash
+git tag v2.2.0
+git push origin v2.2.0
+```
+
+The release workflow runs the tests, builds the wheel and sdist, and publishes
+them with the matching `CHANGELOG.md` section as the release notes.
 
 ---
 
